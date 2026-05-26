@@ -1,65 +1,111 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useEffect, useState } from 'react';
+import { POST } from './api/ideas/route';
+
+type Idea = {
+  id: string;
+  title: string;
+  content: string;
+  status: string;
+  tags: string[];
+  createdAt: string;
+};
+
+type ListIdeasResponse = {
+  items: Idea[];
+  meta: {
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    hasNextPage: boolean;
+  };
+};
+
+type ApiError = {
+  code: string;
+  message: string;
+  requestId: string;
+  details?: unknown;
+};
+
+export default function HomePage() {
+  const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  async function loadIdeas() {
+    setError(null);
+    const response = await fetch('/api/ideas?page=1&pageSize=10');
+    const data = await response.json();
+    if (!response.ok) {
+      setError(data.message ?? 'Failed to load ideas');
+      return;
+    }
+    setIdeas(data.items);
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    const response = await fetch('/api/ideas', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title,
+        content,
+        status: 'draft',
+        tags: ['manual'],
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok){
+      setError(data.message ?? 'Failed to create idea')
+      return;
+    }
+    setTitle('');
+    setContent('');
+    await loadIdeas();
+
+  }
+
+  useEffect(() => {
+    loadIdeas();
+  }, []);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main>
+      <h1>Idea Hub</h1>
+
+      {error && <p>{error}</p>}
+
+      <form onSubmit={handleSubmit}>
+        <input
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Idea title"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        <textarea
+          value={content}
+          onChange={(event) => setContent(event.target.value)}
+          placeholder="Idea content"
+        />
+        <button type="submit">Create Idea</button>
+      </form>
+
+      <ul>
+        {ideas.map((idea) => (
+          <li key={idea.id}>
+            <h2>{idea.title}</h2>
+            <p>{idea.content}</p>
+          </li>
+        ))}
+      </ul>
+    </main>
   );
+
 }

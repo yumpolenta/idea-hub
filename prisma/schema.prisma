@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ideas     Idea[]
+  projects  Project[]
+  tasks     Task[]
+
+  @@map("users")
+}
+
+model Project {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownerId   String   @db.Uuid
+  owner     User     @relation(fields: [ownerId], references: [id])
+
+  tasks     Task[]
+
+  @@unique([ownerId, slug])
+  @@map("projects")
+}
+
+
+model Task {
+  id        String    @id @default(uuid()) @db.Uuid
+  title     String
+  status    String    @default("todo")
+  priority  String    @default("medium")
+  dueDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  ownerId   String    @db.Uuid
+  owner     User      @relation(fields: [ownerId], references: [id])
+
+  projectId String?   @db.Uuid
+  project   Project?  @relation(fields: [projectId], references: [id])
+
+  @@map("tasks")
+}
+
+
+
+model Idea {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String
+  status    String   @default("draft")
+  createdAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  ownerId   String   @db.Uuid
+  owner     User     @relation(fields: [ownerId], references: [id])
+
+  @@map("ideas")
+}
+
